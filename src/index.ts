@@ -32,19 +32,14 @@ class Lock {
         let lock: any = false;
         let intervalId: any = undefined;
         try {
-            lock = await this.getLock({ key, value, expiresTime });
-            if (lock) {
-                if (watchdog) {
-                    intervalId = setInterval((key, value, expiresTime) => {
-                        this.pexpire(key, value, expiresTime);
-                    }, safeFloatCalc(expiresTime / 3));
-                }
-
-                result = await fun();
-            } else {
-                await sleep(retryTime);
-                result = await this.lock(key, fun, watchdog, expiresTime, retryTime);
+            lock = await this.getLock({ key, value, expiresTime, retryTime });
+            if (watchdog) {
+                intervalId = setInterval(async (key, value, expiresTime) => {
+                    await this.pexpire(key, value, expiresTime);
+                }, safeFloatCalc(expiresTime / 3));
             }
+
+            result = await fun();
         } finally {
             if (intervalId) {
                 clearInterval(intervalId);
@@ -72,19 +67,46 @@ class Lock {
         key,
         value,
         expiresTime = 600 * 1000,
+        retryTime = 10,
     }: {
         key: string;
         value: string;
         expiresTime?: number;
+        retryTime?: number;
     }) {
-        return new Promise((resolve, reject) => {
-            this._client.set(key, value, 'NX', 'PX', expiresTime, (error, reply) => {
-                if (error) {
-                    reject(error);
-                }
-                resolve(reply === 'OK' ? value : reply);
-            });
+        const get = new Promise((resolve, reject) => {
+            const client = this._client;
+            function retryFun() {
+                const set = new Promise((resolve, reject) => {
+                    client.set(key, value, 'NX', 'PX', expiresTime, (error, reply) => {
+                        if (error) {
+                            reject(error);
+                        }
+                        resolve(reply === 'OK' ? value : reply);
+                    });
+                });
+
+                set.then((res) => {
+                    if (res === value) {
+                        resolve(value);
+                    } else {
+                        setTimeout(retryFun, retryTime);
+                    }
+                });
+            }
+
+            //  if (failAfterMillis != null) {
+            //      failTimeoutId = setTimeout(() => {
+            //          reject(new Error(`Lock could not be acquire for ${failAfterMillis} millis`));
+            //      }, failAfterMillis);
+            //  }
+
+            retryFun();
         });
+
+        await get;
+
+        return key;
     }
 
     private async releaseLock(key: string, value: string): Promise<boolean> {

@@ -8,10 +8,13 @@
 		],
 		"sourceMap": true,
 		"rootDir": "src",
-		"strict": true
+		"strict": true,
+		"declaration": true,
+		"declarationDir": "dist",
 	},
 	"exclude": [
 		"node_modules",
 		".vscode",
+		"dist"
 	]
 }

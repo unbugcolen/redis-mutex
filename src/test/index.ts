@@ -39,13 +39,11 @@ describe('base', function () {
             let temp = number;
             await sleep(getRandomArbitrary(1, 100));
             number = temp + 1;
-            console.log('');
         }
         async function unsafeSubtract() {
             let temp = number;
             await sleep(getRandomArbitrary(1, 100));
             number = temp - 1;
-            console.log('');
         }
         const key = 'key';
         async function func1(func: () => void) {
@@ -57,11 +55,11 @@ describe('base', function () {
         let result = await new Promise(async (resolve) => {
             let result: any = [];
             setTimeout(async () => {
-                func1(unsafeAdd).then(() => result.push(3));
-                func2(unsafeSubtract).then(() => result.push(4));
+                await func1(unsafeAdd).then(() => result.push(3));
+                await func2(unsafeSubtract).then(() => result.push(4));
             }, 1000);
-            func1(unsafeAdd).then(() => result.push(1));
-            func2(unsafeSubtract).then(() => result.push(2));
+            await func1(unsafeAdd).then(() => result.push(1));
+            await func2(unsafeSubtract).then(() => result.push(2));
             setInterval(() => {
                 if (result.length === 4) {
                     resolve(result);
@@ -72,7 +70,7 @@ describe('base', function () {
         assert(number === 0, `promise && setTimeout failed`);
     });
 
-    it('watchdog', async function () {
+    it.only('watchdog', async function () {
         // this.timeout(100000000);
         async function businessWaitingFun(fun: () => void, time: number = 1000): Promise<boolean> {
             await fun();
@@ -93,22 +91,19 @@ describe('base', function () {
         }
         const key = 'key';
         async function func1(func: () => void, time: number = 1000) {
-            return await mutex1.lock(key, async () => businessWaitingFun(func, time), true, 10);
+            return await mutex1.lock(key, async () => await businessWaitingFun(func, time), true, 10);
         }
         async function func2(func: () => void, time: number = 1000) {
-            return await mutex2.lock(key, async () => businessWaitingFun(func, time), true, 10);
+            return await mutex2.lock(key, async () => await businessWaitingFun(func, time), true, 10);
         }
 
-        let result = await Promise.all([
+        await Promise.all([
             func1(unsafeAdd).then(() => console.log('1')),
             func1(unsafeSubtract).then(() => console.log('2')),
             func2(unsafeAdd).then(() => console.log('3')),
             func2(unsafeSubtract).then(() => console.log('4')),
         ]);
-
-        console.log(number, result);
+        console.log(number);
         assert(number === 0, 'watchdog failed');
     });
-
-    it('error', async function () {});
 });
