@@ -1,17 +1,20 @@
 {
-  "name": "redis-mutex",
+  "name": "@unbugcolen/redis-mutex",
   "version": "1.0.0",
   "description": "",
-  "main": "out/index.js",
+  "main": "dist/index",
   "scripts": {
-    "test": "mocha out/test"
+    "build": "tsc",
+    "test": "mocha dist/test"
   },
-  "keywords": [],
+  "keywords": [
+    "typescript"
+  ],
   "author": {
-    "name": "COLEN-Zeng",
-    "email": "718399822@qq.com"
+    "name": "unbugcolen",
+    "email": "unbugcolen@gmail.com"
   },
-  "repository": "https://github.com/COLEN-Zeng",
+  "repository": "git@github.com:COLEN-Zeng/redis-mutex.git",
   "license": "ISC",
   "dependencies": {
     "mocha": "^8.3.2",

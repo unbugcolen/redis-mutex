@@ -71,7 +71,7 @@ describe('base', function () {
     });
 
     it('watchdog', async function () {
-        // this.timeout(100000000);
+        this.timeout(100000);
         async function businessWaitingFun(fun: () => void, time: number = 1000): Promise<boolean> {
             await fun();
             await sleep(time);
