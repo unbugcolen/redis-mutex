@@ -12,7 +12,18 @@ declare class Lock {
      * @param retryTime 10ms
      * @returns
      */
-    lock(key: string, fun: (...args: any) => void, watchdog?: boolean, expiresTime?: number, retryTime?: number): Promise<any>;
+    lock(key: string, fun: (...args: any) => Promise<any>, watchdog?: boolean, expiresTime?: number, retryTime?: number): Promise<unknown>;
+    /**
+     *
+     * @param key
+     * @param fun
+     * @param watchdog
+     * @param expiresTime 60000ms
+     * @param retryTime 10ms
+     * @returns
+     */
+    private rLock;
+    private pLock;
     pexpire(key: string, value: string, expiresTime: number): Promise<unknown>;
     private getLock;
     private releaseLock;

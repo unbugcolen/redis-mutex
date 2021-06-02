@@ -1,8 +1,7 @@
 import * as redis from 'redis';
 import { v4 } from 'uuid';
-import { safeFloatPremiumCalc as safeFloatCalc, sleep } from './unit';
+import { safeFloatPremiumCalc as safeFloatCalc, sleep, ProcessMutex } from './unit';
 const uuid = () => v4().replace(/-/g, '').toUpperCase();
-
 class Lock {
     private _client: redis.RedisClient;
     private _prefix: string;
@@ -21,7 +20,28 @@ class Lock {
      */
     async lock(
         key: string,
-        fun: (...args: any) => void,
+        fun: (...args: any) => Promise<any>,
+        watchdog: boolean = true,
+        expiresTime: number = 60 * 1000,
+        retryTime: number = 10
+    ) {
+        return await this.pLock(
+            key,
+            async () => await this.rLock(key, fun, watchdog, expiresTime, retryTime)
+        );
+    }
+    /**
+     *
+     * @param key
+     * @param fun
+     * @param watchdog
+     * @param expiresTime 60000ms
+     * @param retryTime 10ms
+     * @returns
+     */
+    private async rLock(
+        key: string,
+        fun: (...args: any) => Promise<any>,
         watchdog: boolean = true,
         expiresTime: number = 60 * 1000,
         retryTime: number = 10
@@ -51,6 +71,10 @@ class Lock {
         return result;
     }
 
+    private async pLock(key: string, fun: () => Promise<any>) {
+        return await ProcessMutex.lock(key, fun);
+    }
+
     async pexpire(key: string, value: string, expiresTime: number) {
         const luaScript = `if redis.call("get",KEYS[1]) == ARGV[1] then return redis.call("pexpire",KEYS[1], ARGV[2]) else return 0 end`;
         return new Promise((resolve, reject) => {
@@ -74,7 +98,7 @@ class Lock {
         expiresTime?: number;
         retryTime?: number;
     }) {
-        const get = new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
             const client = this._client;
             function retryFun() {
                 const set = new Promise((resolve, reject) => {
@@ -86,6 +110,12 @@ class Lock {
                     });
                 });
 
+                //  if (failAfterMillis != null) {
+                //      failTimeoutId = setTimeout(() => {
+                //          reject(new Error(`Lock could not be acquire for ${failAfterMillis} millis`));
+                //      }, failAfterMillis);
+                //  }
+
                 set.then((res) => {
                     if (res === value) {
                         resolve(value);
@@ -95,16 +125,8 @@ class Lock {
                 });
             }
 
-            //  if (failAfterMillis != null) {
-            //      failTimeoutId = setTimeout(() => {
-            //          reject(new Error(`Lock could not be acquire for ${failAfterMillis} millis`));
-            //      }, failAfterMillis);
-            //  }
-
             retryFun();
         });
-
-        await get;
 
         return key;
     }
