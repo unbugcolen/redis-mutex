@@ -24,7 +24,7 @@ declare class Lock {
      */
     private rLock;
     private pLock;
-    pexpire(key: string, value: string, expiresTime: number): Promise<unknown>;
+    private pexpire;
     private getLock;
     private releaseLock;
 }
